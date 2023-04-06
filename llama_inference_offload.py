@@ -2,19 +2,20 @@ import time
 
 import torch
 import torch.nn as nn
+from transformers import AutoTokenizer
 
 from gptq import *
 from modelutils import *
 from quant import *
 
-from transformers import AutoTokenizer
-
-DEV = torch.device('cuda:0')
-import copy 
-from transformers.models.llama.modeling_llama import LlamaModel,LlamaConfig
-from transformers.modeling_outputs import BaseModelOutputWithPast
-from typing import List, Optional, Tuple, Union
+DEV = torch.device("cuda:0")
+import copy
 import time
+from typing import List, Optional, Tuple, Union
+
+from transformers.modeling_outputs import BaseModelOutputWithPast
+from transformers.models.llama.modeling_llama import LlamaConfig, LlamaModel
+
 
 class Offload_LlamaModel(LlamaModel):
     def __init__(self, config: LlamaConfig):
@@ -130,13 +131,13 @@ class Offload_LlamaModel(LlamaModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
-        
+
         for idx in range(len(self.layers)):
             if idx <= (self.preload - 1):
                 decoder_layer = self.layers[idx]
             else:
                 decoder_layer = self.layers[idx].to(DEV)
-                
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -169,12 +170,11 @@ class Offload_LlamaModel(LlamaModel):
                 )
 
             hidden_states = layer_outputs[0]
-            
+
             if idx > (self.preload - 1):
                 self.layers[idx] = decoder_layer.cpu()
             del decoder_layer
             torch.cuda.empty_cache()
-                
 
             if use_cache:
                 next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
@@ -198,15 +198,19 @@ class Offload_LlamaModel(LlamaModel):
             attentions=all_self_attns,
         )
 
+
 def load_quant(model, checkpoint, wbits, groupsize, pre_layer):
     transformers.models.llama.modeling_llama.LlamaModel = Offload_LlamaModel
-    from transformers import LlamaConfig, LlamaForCausalLM 
+    from transformers import LlamaConfig, LlamaForCausalLM
+
     config = LlamaConfig.from_pretrained(model)
+
     def noop(*args, **kwargs):
         pass
-    torch.nn.init.kaiming_uniform_ = noop 
-    torch.nn.init.uniform_ = noop 
-    torch.nn.init.normal_ = noop 
+
+    torch.nn.init.kaiming_uniform_ = noop
+    torch.nn.init.uniform_ = noop
+    torch.nn.init.normal_ = noop
 
     torch.set_default_dtype(torch.half)
     transformers.modeling_utils._init_weights = False
@@ -215,87 +219,73 @@ def load_quant(model, checkpoint, wbits, groupsize, pre_layer):
     torch.set_default_dtype(torch.float)
     model = model.eval()
     layers = find_layers(model)
-    for name in ['lm_head']:
+    for name in ["lm_head"]:
         if name in layers:
             del layers[name]
     make_quant(model, layers, wbits, groupsize)
 
-    print('Loading model ...')
-    if checkpoint.endswith('.safetensors'):
+    print("Loading model ...")
+    if checkpoint.endswith(".safetensors"):
         from safetensors.torch import load_file as safe_load
+
         model.load_state_dict(safe_load(checkpoint))
     else:
         model.load_state_dict(torch.load(checkpoint))
     model.seqlen = 2048
-    
+
     for i in range(pre_layer):
         model.model.layers[i].to(DEV)
     model.model.embed_tokens.to(DEV)
     model.model.norm.to(DEV)
     model.lm_head.to(DEV)
     model.model.preload = pre_layer
-    print('Done.')
+    print("Done.")
     return model
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import argparse
+
     from datautils import *
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("model", type=str, help="llama model to load")
+    parser.add_argument("--wbits", type=int, default=4, choices=[2, 3, 4, 8], help="#bits to use for quantization")
     parser.add_argument(
-        'model', type=str,
-        help='llama model to load'
+        "--groupsize", type=int, default=-1, help="Groupsize to use for quantization; default uses full row."
     )
+    parser.add_argument("--load", type=str, default="", help="Load quantized model.")
+    parser.add_argument("--text", type=str, help="input text")
+
     parser.add_argument(
-        '--wbits', type=int, default=4, choices=[2, 3, 4, 8],
-        help='#bits to use for quantization'
+        "--min_length", type=int, default=10, help="The minimum length of the sequence to be generated."
     )
+
     parser.add_argument(
-        '--groupsize', type=int, default=-1,
-        help='Groupsize to use for quantization; default uses full row.'
+        "--max_length", type=int, default=50, help="The maximum length of the sequence to be generated."
     )
+
     parser.add_argument(
-        '--load', type=str, default='',
-        help='Load quantized model.'
+        "--top_p",
+        type=float,
+        default=0.95,
+        help="If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept for generation.",
     )
+
     parser.add_argument(
-        '--text', type=str,
-        help='input text'
+        "--temperature", type=float, default=0.8, help="The value used to module the next token probabilities."
     )
-    
-    parser.add_argument(
-        '--min_length', type=int, default=10,
-        help='The minimum length of the sequence to be generated.'
-    )
-    
-    parser.add_argument(
-        '--max_length', type=int, default=50,
-        help='The maximum length of the sequence to be generated.'
-    )
-    
-    parser.add_argument(
-        '--top_p', type=float , default=0.95,
-        help='If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept for generation.'
-    )
-    
-    parser.add_argument(
-        '--temperature', type=float, default=0.8,
-        help='The value used to module the next token probabilities.'
-    )
-    
-    parser.add_argument(
-        '--pre_layer', type=int, default=50,
-        help='The number of layers to preload'
-    )
-    
+
+    parser.add_argument("--pre_layer", type=int, default=50, help="The number of layers to preload")
+
     args = parser.parse_args()
 
     if type(args.load) is not str:
         args.load = args.load.as_posix()
-    
+
     model = load_quant(args.model, args.load, args.wbits, args.groupsize, args.pre_layer)
-        
+
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     input_ids = tokenizer.encode(args.text, return_tensors="pt").to(DEV)
 
