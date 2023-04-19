@@ -1,5 +1,5 @@
 # GPTQ-for-SantaCoder
-4 bits quantization of [SantaCoder](https://arxiv.org/abs/2302.13971) using [GPTQ](https://arxiv.org/abs/2210.17323)
+Quantization of [SantaCoder](https://arxiv.org/abs/2301.03988) using [GPTQ](https://arxiv.org/abs/2210.17323)
 
 GPTQ is SOTA one-shot weight quantization method
 
@@ -8,68 +8,64 @@ GPTQ is SOTA one-shot weight quantization method
 Changed to support new features proposed by [GPTQ](https://github.com/IST-DASLab/gptq#new-features).
 
 * Slightly adjusted preprocessing of C4 and PTB for more realistic evaluations (used in our updated results); can be activated via the flag --new-eval.
-* two new tricks:--act-order (quantizing columns in order of decreasing activation size) and --true-sequential (performing sequential quantization even within a single Transformer block). Those fix GPTQ's strangely bad performance on the 7B model (from 7.15 to 6.09 Wiki2 PPL) and lead to slight improvements on most models/settings in general. 
-
-**Unless you are using 3bit, i recommend using a [branch](https://github.com/qwopqwop200/GPTQ-for-LLaMa/tree/triton) that currently supports [triton](https://github.com/openai/triton).**
+* two new tricks:--act-order (quantizing columns in order of decreasing activation size) and --true-sequential (performing sequential quantization even within a single Transformer block). Those fix GPTQ's strangely bad performance on the 7B model (from 7.15 to 6.09 Wiki2 PPL) and lead to slight improvements on most models/settings in general.
 
 ## Result
 <details>
-<summary>LLaMA-7B(click me)</summary>
+<summary>SantaCoder (mlp.c_proj is quantized)</summary>
 
-| [LLaMA-7B](https://arxiv.org/abs/2302.13971)       | Bits | group-size | memory(MiB) | Wikitext2 | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ------------------- |
-| FP16                                               |  16  |     -      |    13940    |    5.68   |         12.5        |
-| RTN                                                |  4   |     -      |      -      |    6.29   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |     -      |     4740    |    6.09   |          3.5        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |     4891    |    5.85   |          3.6        |
-| RTN                                                |  3   |     -      |      -      |   25.54   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -      |     3852    |    8.07   |          2.7        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |     4116    |    6.61   |          3.0        |
-
+| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
+| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.927   |   38.573   |   27.779   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  3826.636 |  2649.847  |  2414.551  |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 62048.417 | 58560.054  |  60491.882 |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 81707.148 | 92115.679  |  96399.148 |                     |
 </details>
 
 <details>
-<summary>LLaMA-13B</summary>
+<summary>SantaCoder (mlp.c_fc, mlp.c_proj are quantized)</summary>
 
-| [LLaMA-13B](https://arxiv.org/abs/2302.13971)      | Bits | group-size | memory(MiB) | Wikitext2 | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ------------------- |
-| FP16                                               |  16  |     -      |     OOM     |    5.09   |         24.2        |
-| RTN                                                |  4   |     -      |      -      |    5.53   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |     -      |     8410    |    5.36   |          6.5        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |     8747    |    5.20   |          6.7        |
-| RTN                                                |  3   |     -      |      -      |   11.40   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -      |     6870    |    6.63   |          5.1        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |     7277    |    5.62   |          5.4        |
-
+| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2  |    ptb     |     c4     | checkpoint size(GB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | ---------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |      -      |  24.927    |   38.574   |   27.778   |                     |
+| BF16                                               |  16  |     -      |      -      |  24.959    |   38.597   |   27.794   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.926    |   38.573   |   27.778   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  1817.965  |  1447.092  |  1097.042  |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 30591.978  | 23359.292  |  24260.835 |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 171096.671 | 146505.640 | 143637.171 |                     |
 </details>
 
 <details>
-<summary>LLaMA-33B</summary>
+<summary>SantaCoder (attn.c_attn, attn.c_proj, mlp.c_fc, mlp.c_proj are quantized)</summary>
 
-| [LLaMA-33B](https://arxiv.org/abs/2302.13971)      | Bits | group-size | memory(MiB) | Wikitext2 | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ------------------- |
-| FP16                                               |  16  |     -      |     OOM     |    4.10   |         60.5        |
-| RTN                                                |  4   |     -      |      -      |    4.54   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |     -      |    19493    |    4.45   |         15.7        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |    20570    |    4.23   |         16.3        |
-| RTN                                                |  3   |     -      |      -      |   14.89   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -      |    15493    |    5.69   |         12.0        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |    16566    |    4.80   |         13.0        |
-
+| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
+| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.928   |   38.574   |   27.780   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      | 2399.166  |  1790.777  |  1523.385  |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 62389.542 | 56150.347  | 62935.148  |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 96986.914 | 117020.460 | 107408.796 |                     |
 </details>
 
 <details>
-<summary>LLaMA-65B</summary>
+<summary>SantaCoder (attn.c_attn, attn.c_proj are quantized)</summary>
 
-| [LLaMA-65B](https://arxiv.org/abs/2302.13971)      | Bits | group-size | memory(MiB) | Wikitext2 | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ------------------- |
-| FP16                                               |  16  |     -      |     OOM     |    3.53   |         121.0       |
-| RTN                                                |  4   |     -      |      -      |    3.92   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |     -      |     OOM     |    3.84   |         31.1        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |     OOM     |    3.65   |         32.3        |
-| RTN                                                |  3   |     -      |      -      |   10.59   |          -          |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -      |     OOM     |    5.04   |         23.6        |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |     OOM     |    4.17   |         25.6        |
+| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
+| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.928   |   38.573   |   27.779   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  25.001   |   38.721   |   27.842   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      |  25.290   |   39.182   |   28.115   |                     |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      |  42.108   |   63.644   |   41.957   |                     |
+</details>
+
+<details>
+<summary>SantaCoder (attn.c_attn, attn.c_proj, mlp.c_fc are quantized)</summary>
+crashed :(
 </details>
 
 Quantization requires a large amount of CPU memory. However, the memory required can be reduced by using swap memory.
@@ -87,8 +83,6 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvi
 # Or, if you're having trouble with conda, use pip with python3.9:
 # pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 
-git clone https://github.com/qwopqwop200/GPTQ-for-LLaMa
-cd GPTQ-for-LLaMa
 pip install -r requirements.txt
 python setup_cuda.py install
 
@@ -136,7 +130,5 @@ Basically, 4-bit quantization and 128 groupsize are recommended.
 
 # Acknowledgements
 This code is based on [GPTQ](https://github.com/IST-DASLab/gptq)
-
-Thanks to Meta AI for releasing [LLaMA](https://arxiv.org/abs/2302.13971), a powerful LLM.
 
 Triton GPTQ kernel code is based on [GPTQ-triton](https://github.com/fpgaminer/GPTQ-triton)

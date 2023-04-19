@@ -413,6 +413,4 @@ if __name__ == "__main__":
     if args.save_safetensors:
         from safetensors.torch import save_file as safe_save
 
-        state_dict = model.state_dict()
-        state_dict = {k: v.clone().contiguous() for k, v in state_dict.items()}
-        safe_save(state_dict, args.save_safetensors)
+        safe_save(model.state_dict(), args.save_safetensors)
