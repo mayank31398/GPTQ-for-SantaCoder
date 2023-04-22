@@ -51,21 +51,29 @@ All experiments were run on a single NVIDIA RTX3090.
 
 # Language Generation
 ## SantaCoder
-Visit [mayank31398/santacoder-GPTQ](https://huggingface.co/mayank31398/santacoder-GPTQ) for the quantized weights.
+Visit [mayank31398/santacoder-GPTQ](https://huggingface.co/mayank31398/santacoder-GPTQ) for the quantized weights. Get them using:
+```shell
+git clone https://huggingface.co/mayank31398/santacoder-GPTQ
+```
 Alternatively, you can also use [convert.sh](convert.sh) to get the quantized models and save them to disk.
 
 For benchmarking, use [benchmark.sh](benchmark.sh).
 
+For generation use:
 ```shell
-# model inference with the saved model
-CUDA_VISIBLE_DEVICES=0 python llama_inference.py ./llama-hf/llama-7b --wbits 4 --groupsize 128 --load llama7b-4bit-128g.pt --text "this is llama"
-# model inference with the saved model using safetensors loaded direct to gpu
-CUDA_VISIBLE_DEVICES=0 python llama_inference.py ./llama-hf/llama-7b --wbits 4 --groupsize 128 --load llama7b-4bit-128g.safetensors --text "this is llama --device=0
-# model inference with the saved model with offload(This is very slow. This is a simple implementation and could be improved with technologies like flexgen(https://github.com/FMInference/FlexGen).
-CUDA_VISIBLE_DEVICES=0 python llama_inference_offload.py ./llama-hf/llama-7b --wbits 4 --groupsize 128 --load llama7b-4bit-128g.pt --text "this is llama" --pre_layer 16
-It takes about 180 seconds to generate 45 tokens(5->50 tokens) on single RTX3090 based on LLaMa-65B. pre_layer is set to 50.
+# fp32
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 32
+# bf16
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 16
+
+# the weights for int8 and int4 created using GPTQ are on https://huggingface.co/mayank31398/santacoder-GPTQ
+# use `git clone https://huggingface.co/mayank31398/santacoder-GPTQ` to get them
+
+# GPTQ int8
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 8 --load santacoder-GPTQ/8-bit/model.pt
+# GPTQ int4
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 4 --load santacoder-GPTQ/4-bit/model.pt
 ```
-Basically, 4-bit quantization and 128 groupsize are recommended.
 
 # Acknowledgements
 This code is based on [GPTQ](https://github.com/IST-DASLab/gptq)
