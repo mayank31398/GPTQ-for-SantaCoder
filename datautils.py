@@ -1,5 +1,11 @@
+import os
+import random
+
 import numpy as np
+import pandas as pd
 import torch
+from datasets import Dataset, load_dataset
+from transformers import AutoTokenizer
 
 
 def set_seed(seed):
@@ -8,18 +14,12 @@ def set_seed(seed):
 
 
 def get_wikitext2(nsamples, seed, seqlen, model):
-    from datasets import load_dataset
-
     traindata = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
     testdata = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-
-    from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
     trainenc = tokenizer("\n\n".join(traindata["text"]), return_tensors="pt")
     testenc = tokenizer("\n\n".join(testdata["text"]), return_tensors="pt")
-
-    import random
 
     random.seed(seed)
     trainloader = []
@@ -34,18 +34,12 @@ def get_wikitext2(nsamples, seed, seqlen, model):
 
 
 def get_ptb(nsamples, seed, seqlen, model):
-    from datasets import load_dataset
-
     traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
     valdata = load_dataset("ptb_text_only", "penn_treebank", split="validation")
-
-    from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
     trainenc = tokenizer("\n\n".join(traindata["sentence"]), return_tensors="pt")
     testenc = tokenizer("\n\n".join(valdata["sentence"]), return_tensors="pt")
-
-    import random
 
     random.seed(seed)
     trainloader = []
@@ -60,8 +54,6 @@ def get_ptb(nsamples, seed, seqlen, model):
 
 
 def get_c4(nsamples, seed, seqlen, model):
-    from datasets import load_dataset
-
     traindata = load_dataset(
         "allenai/c4",
         "allenai--c4",
@@ -77,11 +69,7 @@ def get_c4(nsamples, seed, seqlen, model):
         use_auth_token=False,
     )
 
-    from transformers import AutoTokenizer
-
     tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
-
-    import random
 
     random.seed(seed)
     trainloader = []
@@ -97,8 +85,6 @@ def get_c4(nsamples, seed, seqlen, model):
         tar = inp.clone()
         tar[:, :-1] = -100
         trainloader.append((inp, tar))
-
-    import random
 
     random.seed(0)
     valenc = []
@@ -125,18 +111,12 @@ def get_c4(nsamples, seed, seqlen, model):
 
 
 def get_ptb_new(nsamples, seed, seqlen, model):
-    from datasets import load_dataset
-
     traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
     testdata = load_dataset("ptb_text_only", "penn_treebank", split="test")
-
-    from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
     trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
     testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
-
-    import random
 
     random.seed(seed)
     trainloader = []
@@ -151,8 +131,6 @@ def get_ptb_new(nsamples, seed, seqlen, model):
 
 
 def get_c4_new(nsamples, seed, seqlen, model):
-    from datasets import load_dataset
-
     traindata = load_dataset(
         "allenai/c4", "allenai--c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train"
     )
@@ -163,11 +141,7 @@ def get_c4_new(nsamples, seed, seqlen, model):
         split="validation",
     )
 
-    from transformers import AutoTokenizer
-
     tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
-
-    import random
 
     random.seed(seed)
     trainloader = []
@@ -196,14 +170,67 @@ def get_c4_new(nsamples, seed, seqlen, model):
     return trainloader, valenc
 
 
+def get_stack(nsamples, seed, seqlen, model):
+    languages = ["c++", "java", "javascript", "python"][:1]
+
+    tokenizer = AutoTokenizer.from_pretrained(model, use_fast=False)
+
+    seed = 0
+    size = 1000
+    seqlen = 2048
+    nsamples = 128
+    test_samples = 150
+
+    trainloader = []
+    testloader = []
+
+    for language in languages:
+        thestack = load_dataset(
+            "bigcode/multi_safe_license_raw",
+            use_auth_token=os.environ["HF_API_KEY"],
+            split="train",
+            streaming=True,
+            data_files=[f"data/{language}/*"],
+        )
+        # print(f"subset {language} loaded")
+        ds = thestack.shuffle(seed=seed)
+
+        # 10k subset of random samples from ds
+        small_ds = list(ds.take(size))
+        # convert to Datasets
+        small_ds = Dataset.from_pandas(pd.DataFrame(data=small_ds))
+
+        for i in range(len(small_ds)):
+            trainenc = tokenizer(small_ds[i]["content"], return_tensors="pt")["input_ids"]
+            if trainenc.shape[1] < seqlen + 1:
+                continue
+
+            i = random.randint(0, trainenc.shape[1] - seqlen - 1)
+            j = i + seqlen
+            inp = trainenc[:, i:j]
+
+            if len(trainloader) < nsamples:
+                tar = inp.clone()
+                tar[:, :-1] = -100
+                trainloader.append((inp, tar))
+            elif len(testloader) < test_samples:
+                testloader.append(inp)
+            else:
+                break
+
+    return trainloader, torch.cat(testloader, dim=-1)
+
+
 def get_loaders(name, nsamples=128, seed=0, seqlen=2048, model=""):
     if "wikitext2" in name:
         return get_wikitext2(nsamples, seed, seqlen, model)
-    if "ptb" in name:
+    elif "ptb" in name:
         if "new" in name:
             return get_ptb_new(nsamples, seed, seqlen, model)
         return get_ptb(nsamples, seed, seqlen, model)
-    if "c4" in name:
+    elif "c4" in name:
         if "new" in name:
             return get_c4_new(nsamples, seed, seqlen, model)
         return get_c4(nsamples, seed, seqlen, model)
+    elif "stack" in name:
+        return get_stack(nsamples, seed, seqlen, model)

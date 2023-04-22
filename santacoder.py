@@ -14,14 +14,12 @@ torch.nn.init.normal_ = lambda *args, **kwargs: None
 
 
 def get_santacoder(model, wbits):
-    if wbits == 32:
-        torch_dtype = torch.float32
     if wbits == 16:
         torch_dtype = torch.bfloat16
     else:
-        torch_dtype = "auto"
+        torch_dtype = torch.float32
 
-    model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch_dtype, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch_dtype)
     model.seqlen = 2048
     return model
 
@@ -158,14 +156,15 @@ def santacoder_sequential(model, dataloader, dev, level):
 
 
 @torch.no_grad()
-def santacoder_eval(model, testenc, dev):
+def santacoder_eval(model, testenc, dev, dataset_name):
     def get_batch_iterator(data, nsamples):
         for i in range(nsamples):
             yield data[:, (i * model.seqlen) : ((i + 1) * model.seqlen)]
 
     print("Evaluating ...")
 
-    testenc = testenc.input_ids
+    if dataset_name != "stack":
+        testenc = testenc.input_ids
     nsamples = testenc.numel() // model.seqlen
 
     use_cache = model.config.use_cache
@@ -274,7 +273,7 @@ def benchmark(model, input_ids, check=False):
 
         return tmp
 
-    for i, layer in enumerate(model.model.layers):
+    for i, layer in enumerate(model.transformer.h):
         layer.register_forward_hook(clear_past(i))
 
     print("Benchmarking ...")
@@ -325,9 +324,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("model", type=str, help="llama model to load")
+    parser.add_argument("model", type=str, help="model to load")
     parser.add_argument(
-        "dataset", type=str, choices=["wikitext2", "ptb", "c4"], help="Where to extract calibration data from."
+        "dataset",
+        type=str,
+        choices=["wikitext2", "ptb", "c4", "stack"],
+        help="Where to extract calibration data from.",
     )
     parser.add_argument("--seed", type=int, default=0, help="Seed for sampling the calibration data.")
     parser.add_argument("--nsamples", type=int, default=128, help="Number of calibration data samples.")
@@ -364,7 +366,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--optimization-level",
         type=int,
-        choices=[-1, -2, -3, 1, 2, 3],
+        choices=[-2, -1, 1, 2, 3],
         help="Whether to run in true sequential model.",
     )
     parser.add_argument("--new-eval", action="store_true", help="Whether to use the new PTB and C4 eval")
@@ -384,12 +386,10 @@ if __name__ == "__main__":
         args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=model.seqlen
     )
 
-    if args.wbits < 16:
-        if not args.load and not args.nearest:
-            tick = time.time()
-            quantizers = santacoder_sequential(model, dataloader, DEV, args.optimization_level)
-            print(time.time() - tick)
-
+    if not args.load and args.wbits < 16 and not args.nearest:
+        tick = time.time()
+        quantizers = santacoder_sequential(model, dataloader, DEV, args.optimization_level)
+        print(time.time() - tick)
         santacoder_pack(model, quantizers, args.wbits, args.groupsize)
 
     if args.benchmark:
@@ -399,13 +399,13 @@ if __name__ == "__main__":
             benchmark(model, input_ids, check=args.check)
 
     if args.eval:
-        datasets = ["wikitext2", "ptb", "c4"]
+        datasets = ["wikitext2", "ptb", "c4", "stack"]
         if args.new_eval:
             datasets = ["wikitext2", "ptb-new", "c4-new"]
         for dataset in datasets:
             dataloader, testloader = get_loaders(dataset, seed=args.seed, model=args.model, seqlen=model.seqlen)
             print(dataset)
-            santacoder_eval(model, testloader, DEV)
+            santacoder_eval(model, testloader, DEV, dataset)
 
     if args.save:
         torch.save(model.state_dict(), args.save)

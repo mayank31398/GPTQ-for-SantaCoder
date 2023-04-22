@@ -11,62 +11,14 @@ Changed to support new features proposed by [GPTQ](https://github.com/IST-DASLab
 * two new tricks:--act-order (quantizing columns in order of decreasing activation size) and --true-sequential (performing sequential quantization even within a single Transformer block). Those fix GPTQ's strangely bad performance on the 7B model (from 7.15 to 6.09 Wiki2 PPL) and lead to slight improvements on most models/settings in general.
 
 ## Result
-<details>
-<summary>SantaCoder (mlp.c_proj is quantized)</summary>
-
-| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
-| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
-| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.927   |   38.573   |   27.779   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  3826.636 |  2649.847  |  2414.551  |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 62048.417 | 58560.054  |  60491.882 |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 81707.148 | 92115.679  |  96399.148 |                     |
-</details>
-
-<details>
-<summary>SantaCoder (mlp.c_fc, mlp.c_proj are quantized)</summary>
-
-| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2  |    ptb     |     c4     | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | ---------- | ---------- | ---------- | ------------------- |
-| FP32                                               |  32  |     -      |      -      |  24.927    |   38.574   |   27.778   |                     |
-| BF16                                               |  16  |     -      |      -      |  24.959    |   38.597   |   27.794   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.926    |   38.573   |   27.778   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  1817.965  |  1447.092  |  1097.042  |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 30591.978  | 23359.292  |  24260.835 |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 171096.671 | 146505.640 | 143637.171 |                     |
-</details>
-
-<details>
-<summary>SantaCoder (attn.c_attn, attn.c_proj, mlp.c_fc, mlp.c_proj are quantized)</summary>
-
-| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
-| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
-| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.928   |   38.574   |   27.780   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      | 2399.166  |  1790.777  |  1523.385  |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      | 62389.542 | 56150.347  | 62935.148  |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      | 96986.914 | 117020.460 | 107408.796 |                     |
-</details>
-
-<details>
-<summary>SantaCoder (attn.c_attn, attn.c_proj are quantized)</summary>
-
-| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     | checkpoint size(GB) |
-| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ------------------- |
-| FP32                                               |  32  |     -      |      -      |  24.927   |   38.574   |   27.778   |                     |
-| BF16                                               |  16  |     -      |      -      |  24.959   |   38.597   |   27.794   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |      -      |  24.928   |   38.573   |   27.779   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |      -      |  25.001   |   38.721   |   27.842   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |    128     |      -      |  25.290   |   39.182   |   28.115   |                     |
-| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |    128     |      -      |  42.108   |   63.644   |   41.957   |                     |
-</details>
-
-<details>
-<summary>SantaCoder (attn.c_attn, attn.c_proj, mlp.c_fc are quantized)</summary>
-crashed :(
-</details>
+| [SantaCoder](https://arxiv.org/abs/2301.03988)     | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     |   stack    | checkpoint size(MB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |  4344.722   |  24.927   |   38.574   |   27.779   |   2.619    |        4394         |
+| BF16                                               |  16  |     -      |  2173.680   |  24.960   |   38.597   |   27.794   |   2.621    |        2195         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |     -1     |  1396.548   |  24.936   |   38.592   |   27.785   |   2.619    |        1411         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |     -1     |   911.384   |  26.581   |   40.717   |   29.232   |   2.658    |         913         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -1     |      -      | 11761.473 |  7273.338  |  9124.941  |  2485.844  |         789         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |     -1     |      -      | 67976.797 | 68994.484  | 73294.438  | 45370.488  |         649         |
 
 Quantization requires a large amount of CPU memory. However, the memory required can be reduced by using swap memory.
 
@@ -76,7 +28,7 @@ According to [GPTQ paper](https://arxiv.org/abs/2210.17323), As the size of the 
 
 ## Installation
 If you don't have [conda](https://docs.conda.io/en/latest/miniconda.html), install it first.
-```
+```shell
 conda create --name gptq python=3.9 -y
 conda activate gptq
 conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
@@ -85,10 +37,8 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvi
 
 pip install -r requirements.txt
 python setup_cuda.py install
-
-# Benchmark performance for FC2 layer of LLaMa-7B
-CUDA_VISIBLE_DEVICES=0 python test_kernel.py
 ```
+
 ## Dependencies
 
 * `torch`: tested on v2.0.0+cu117
@@ -100,24 +50,13 @@ CUDA_VISIBLE_DEVICES=0 python test_kernel.py
 All experiments were run on a single NVIDIA RTX3090.
 
 # Language Generation
-## LLaMA
+## SantaCoder
+Visit [mayank31398/santacoder-GPTQ](https://huggingface.co/mayank31398/santacoder-GPTQ) for the quantized weights.
+Alternatively, you can also use [convert.sh](convert.sh) to get the quantized models and save them to disk.
 
-```
-#convert LLaMA to hf
-python convert_llama_weights_to_hf.py --input_dir /path/to/downloaded/llama/weights --model_size 7B --output_dir ./llama-hf
+For benchmarking, use [benchmark.sh](benchmark.sh).
 
-# Benchmark language generation with 4-bit LLaMA-7B:
-
-# Save compressed model
-CUDA_VISIBLE_DEVICES=0 python llama.py ./llama-hf/llama-7b c4 --wbits 4 --true-sequential --act-order --groupsize 128 --save llama7b-4bit-128g.pt
-# Or save compressed `.safetensors` model
-CUDA_VISIBLE_DEVICES=0 python llama.py ./llama-hf/llama-7b c4 --wbits 4 --true-sequential --act-order --groupsize 128 --save_safetensors llama7b-4bit-128g.safetensors
-
-# Benchmark generating a 2048 token sequence with the saved model
-CUDA_VISIBLE_DEVICES=0 python llama.py ./llama-hf/llama-7b c4 --wbits 4 --groupsize 128 --load llama7b-4bit-128g.pt --benchmark 2048 --check
-# Benchmark FP16 baseline, note that the model will be split across all listed GPUs
-CUDA_VISIBLE_DEVICES=0,1,2,3,4 python llama.py ./llama-hf/llama-7b c4 --benchmark 2048 --check
-
+```shell
 # model inference with the saved model
 CUDA_VISIBLE_DEVICES=0 python llama_inference.py ./llama-hf/llama-7b --wbits 4 --groupsize 128 --load llama7b-4bit-128g.pt --text "this is llama"
 # model inference with the saved model using safetensors loaded direct to gpu

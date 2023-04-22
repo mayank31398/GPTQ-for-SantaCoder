@@ -200,6 +200,7 @@ class QuantLinear(nn.Module):
 
     def pack(self, linear, scales, zeros, g_idx=None):
         self.g_idx = g_idx.clone() if g_idx is not None else self.g_idx
+        self.g_idx = self.g_idx.to(torch.long)
 
         scales = scales.t().contiguous()
         zeros = zeros.t().contiguous()
