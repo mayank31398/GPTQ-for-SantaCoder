@@ -77,7 +77,7 @@ def get_c4(nsamples, seed, seqlen, model):
         while True:
             i = random.randint(0, len(traindata) - 1)
             trainenc = tokenizer(traindata[i]["text"], return_tensors="pt")
-            if trainenc.input_ids.shape[1] >= seqlen:
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
                 break
         i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
         j = i + seqlen
@@ -177,8 +177,6 @@ def get_stack(nsamples, seed, seqlen, model):
 
     seed = 0
     size = 1000
-    seqlen = 2048
-    nsamples = 128
     test_samples = 150
 
     trainloader = []
@@ -186,8 +184,7 @@ def get_stack(nsamples, seed, seqlen, model):
 
     for language in languages:
         thestack = load_dataset(
-            "bigcode/multi_safe_license_raw",
-            use_auth_token=os.environ["HF_API_KEY"],
+            "bigcode/the-stack",
             split="train",
             streaming=True,
             data_files=[f"data/{language}/*"],

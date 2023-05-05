@@ -1,4 +1,4 @@
-# GPTQ-for-SantaCoder
+# GPTQ-for-SantaCoder-and-StarCoder
 Quantization of [SantaCoder](https://arxiv.org/abs/2301.03988) using [GPTQ](https://arxiv.org/abs/2210.17323)
 
 GPTQ is SOTA one-shot weight quantization method
@@ -20,6 +20,22 @@ Changed to support new features proposed by [GPTQ](https://github.com/IST-DASLab
 | [GPTQ](https://arxiv.org/abs/2210.17323)           |  3   |     -1     |      -      | 11761.473 |  7273.338  |  9124.941  |  2485.844  |         789         |
 | [GPTQ](https://arxiv.org/abs/2210.17323)           |  2   |     -1     |      -      | 67976.797 | 68994.484  | 73294.438  | 45370.488  |         649         |
 
+## Result
+| StarCoder                                          | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     |   stack    | checkpoint size(MB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |             |  10.801   |   16.425   |   13.402   |   1.738    |       59195         |
+| BF16                                               |  16  |     -      |             |  10.807   |   16.424   |   13.408   |   1.739    |       29597         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |             |  10.805   |   15.453   |   13.408   |   1.739    |       16163         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |             |  10.989   |   16.839   |   13.676   |   1.757    |        8877         |
+
+## Result
+| StarCoderBase                                      | Bits | group-size | memory(MiB) | wikitext2 |    ptb     |     c4     |   stack    | checkpoint size(MB) |
+| -------------------------------------------------- | ---- | ---------- | ----------- | --------- | ---------- | ---------- | ---------- | ------------------- |
+| FP32                                               |  32  |     -      |             |  10.172   |   15.756   |   12.736   |   1.692    |       59195         |
+| BF16                                               |  16  |     -      |             |  10.173   |   15.765   |   12.745   |   1.692    |       29597         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  8   |    128     |             |  10.174   |   15.767   |   12.739   |   1.692    |       16163         |
+| [GPTQ](https://arxiv.org/abs/2210.17323)           |  4   |    128     |             |  10.387   |   16.056   |   13.005   |   1.708    |        8877         |
+
 Quantization requires a large amount of CPU memory. However, the memory required can be reduced by using swap memory.
 
 Depending on the GPUs/drivers, there may be a difference in performance, which decreases as the model size increases.(https://github.com/IST-DASLab/gptq/issues/1)
@@ -39,25 +55,19 @@ pip install -r requirements.txt
 python setup_cuda.py install
 ```
 
-## Dependencies
-
-* `torch`: tested on v2.0.0+cu117
-* `transformers`: tested on v4.28.0.dev0
-* `datasets`: tested on v2.10.1
-* `safetensors`: tested on v0.3.0
-* (to run 4-bit kernels: setup for compiling PyTorch CUDA extensions, see also https://pytorch.org/tutorials/advanced/cpp_extension.html, tested on CUDA 11.7)
-
 All experiments were run on a single NVIDIA RTX3090.
 
 # Language Generation
 ## SantaCoder
-Visit [mayank31398/santacoder-GPTQ](https://huggingface.co/mayank31398/santacoder-GPTQ) for the quantized weights. Get them using:
+Visit [mayank31398/santacoder-GPTQ-4bit-128g](https://huggingface.co/mayank31398/santacoder-GPTQ-4bit-128g) for the 4-bit weights.
+Visit [mayank31398/santacoder-GPTQ-8bit-128g](https://huggingface.co/mayank31398/santacoder-GPTQ-8bit-128g) for the 8-bit weights.
 ```shell
-git clone https://huggingface.co/mayank31398/santacoder-GPTQ
+# 4-bit
+git clone https://huggingface.co/mayank31398/santacoder-GPTQ-4bit-128g
+# 8-bit
+git clone https://huggingface.co/mayank31398/santacoder-GPTQ-8bit-128g
 ```
-Alternatively, you can also use [convert.sh](convert.sh) to get the quantized models and save them to disk.
-
-For benchmarking, use [benchmark.sh](benchmark.sh).
+Alternatively, you can also use the [scripts](scripts/) to get the quantized models and save them to disk.
 
 For generation use:
 ```shell
@@ -66,13 +76,58 @@ python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 32
 # bf16
 python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 16
 
-# the weights for int8 and int4 created using GPTQ are on https://huggingface.co/mayank31398/santacoder-GPTQ
-# use `git clone https://huggingface.co/mayank31398/santacoder-GPTQ` to get them
+# GPTQ int8
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 8 --load santacoder-GPTQ-8bit-128g/model.pt
+# GPTQ int4
+python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 4 --load santacoder-GPTQ-4bit-128g/model.pt
+```
+
+## StarCoder
+Visit [mayank31398/starcoder-GPTQ-4bit-128g](https://huggingface.co/mayank31398/starcoder-GPTQ-4bit-128g) for the 4-bit weights.
+Visit [mayank31398/starcoder-GPTQ-8bit-128g](https://huggingface.co/mayank31398/starcoder-GPTQ-8bit-128g) for the 8-bit weights.
+```shell
+# 4-bit
+git clone https://huggingface.co/mayank31398/starcoder-GPTQ-4bit-128g
+# 8-bit
+git clone https://huggingface.co/mayank31398/starcoder-GPTQ-8bit-128g
+```
+Alternatively, you can also use the [scripts](scripts/) to get the quantized models and save them to disk.
+
+For generation use:
+```shell
+# fp32
+python -m santacoder_inference bigcode/starcoder --wbits 32
+# bf16
+python -m santacoder_inference bigcode/starcoder --wbits 16
 
 # GPTQ int8
-python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 8 --load santacoder-GPTQ/8-bit/model.pt
+python -m santacoder_inference bigcode/starcoder --wbits 8 --load starcoder-GPTQ-8bit-128g/model.pt
 # GPTQ int4
-python -m santacoder_inference bigcode/gpt_bigcode-santacoder --wbits 4 --load santacoder-GPTQ/4-bit/model.pt
+python -m santacoder_inference bigcode/starcoder --wbits 4 --load starcoder-GPTQ-4bit-128g/model.pt
+```
+
+## StarCoderBase
+Visit [mayank31398/starcoderbase-GPTQ-4bit-128g](https://huggingface.co/mayank31398/starcoderbase-GPTQ-4bit-128g) for the 4-bit weights.
+Visit [mayank31398/starcoderbase-GPTQ-8bit-128g](https://huggingface.co/mayank31398/starcoderbase-GPTQ-8bit-128g) for the 8-bit weights.
+```shell
+# 4-bit
+git clone https://huggingface.co/mayank31398/starcoderbase-GPTQ-4bit-128g
+# 8-bit
+git clone https://huggingface.co/mayank31398/starcoderbase-GPTQ-8bit-128g
+```
+Alternatively, you can also use the [scripts](scripts/) to get the quantized models and save them to disk.
+
+For generation use:
+```shell
+# fp32
+python -m santacoder_inference bigcode/starcoderbase --wbits 32
+# bf16
+python -m santacoder_inference bigcode/starcoderbase --wbits 16
+
+# GPTQ int8
+python -m santacoder_inference bigcode/starcoderbase --wbits 8 --load starcoderbase-GPTQ-8bit-128g/model.pt
+# GPTQ int4
+python -m santacoder_inference bigcode/starcoderbase --wbits 4 --load starcoderbase-GPTQ-4bit-128g/model.pt
 ```
 
 # Acknowledgements

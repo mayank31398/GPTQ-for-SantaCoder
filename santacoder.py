@@ -2,6 +2,7 @@ import time
 
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM
 
 from gptq import *
@@ -86,7 +87,7 @@ def santacoder_sequential(model, dataloader, dev, level):
     print("Ready.")
 
     quantizers = {}
-    for i in range(len(layers)):
+    for i in tqdm(range(len(layers))):
         print(f"layer {i}")
 
         layer = layers[i].to(dev)
