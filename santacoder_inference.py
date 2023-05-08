@@ -21,7 +21,7 @@ def disable_torch_init():
     transformers.modeling_utils._init_weights = False
 
 
-def get_santacoder(model, checkpoint, wbits):
+def get_santacoder(model, checkpoint, wbits, groupsize):
     if wbits == 16:
         torch_dtype = torch.bfloat16
     else:
@@ -35,7 +35,6 @@ def get_santacoder(model, checkpoint, wbits):
         for name in ["lm_head"]:
             if name in layers:
                 del layers[name]
-        groupsize = -1
         make_quant(model, layers, wbits, groupsize)
 
         model.load_state_dict(torch.load(checkpoint))
@@ -69,13 +68,16 @@ def main():
     parser.add_argument("model", type=str, help="model to load, such as bigcode/gpt_bigcode-santacoder")
     parser.add_argument("--load", type=str, help="load a quantized checkpoint, use normal model if not specified")
     parser.add_argument("--wbits", type=int, default=16, help="bits in quantization checkpoint")
+    parser.add_argument(
+        "--groupsize", type=int, default=-1, help="Groupsize to use for quantization; default uses full row."
+    )
     parser.add_argument("--prompt", type=str, default="pygame example\n\n```", help="prompt the model")
     args = parser.parse_args()
 
     disable_torch_init()
 
     t1 = time.time()
-    model = get_santacoder(args.model, args.load, args.wbits)
+    model = get_santacoder(args.model, args.load, args.wbits, args.groupsize)
     t2 = time.time()
     print("model load time %0.1fms" % ((t2 - t1) * 1000))
 

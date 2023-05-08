@@ -101,9 +101,9 @@ python -m santacoder_inference bigcode/starcoder --wbits 32
 python -m santacoder_inference bigcode/starcoder --wbits 16
 
 # GPTQ int8
-python -m santacoder_inference bigcode/starcoder --wbits 8 --load starcoder-GPTQ-8bit-128g/model.pt
+python -m santacoder_inference bigcode/starcoder --wbits 8 --groupsize 128 --load starcoder-GPTQ-8bit-128g/model.pt
 # GPTQ int4
-python -m santacoder_inference bigcode/starcoder --wbits 4 --load starcoder-GPTQ-4bit-128g/model.pt
+python -m santacoder_inference bigcode/starcoder --wbits 4 --groupsize 128 --load starcoder-GPTQ-4bit-128g/model.pt
 ```
 
 ## StarCoderBase
@@ -125,9 +125,9 @@ python -m santacoder_inference bigcode/starcoderbase --wbits 32
 python -m santacoder_inference bigcode/starcoderbase --wbits 16
 
 # GPTQ int8
-python -m santacoder_inference bigcode/starcoderbase --wbits 8 --load starcoderbase-GPTQ-8bit-128g/model.pt
+python -m santacoder_inference bigcode/starcoderbase --wbits 8 --groupsize 128 --load starcoderbase-GPTQ-8bit-128g/model.pt
 # GPTQ int4
-python -m santacoder_inference bigcode/starcoderbase --wbits 4 --load starcoderbase-GPTQ-4bit-128g/model.pt
+python -m santacoder_inference bigcode/starcoderbase --wbits 4 --groupsize 128 --load starcoderbase-GPTQ-4bit-128g/model.pt
 ```
 
 # Acknowledgements
