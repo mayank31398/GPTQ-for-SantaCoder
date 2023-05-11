@@ -34,7 +34,7 @@ def get_santacoder(model, checkpoint, wbits, groupsize):
     else:
         # Load only models without weights
         config = AutoConfig.from_pretrained(model)
-        model =  AutoModelForCausalLM.from_config(config)
+        model =  AutoModelForCausalLM.from_config(config, torch_dtype=torch_dtype)
     model = model.eval()
 
     if wbits < 16:
