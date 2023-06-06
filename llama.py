@@ -3,6 +3,7 @@ import time
 import torch
 import torch.nn as nn
 
+from fused_attn import *
 from gptq import *
 from modelutils import *
 from quant import *
@@ -207,7 +208,6 @@ def llama_eval(model, testenc, dev):
     if model.model.norm is not None:
         model.model.norm = model.model.norm.to(dev)
     model.lm_head = model.lm_head.to(dev)
-
     testenc = testenc.to(dev)
     nlls = []
     for i in range(nsamples):
@@ -275,6 +275,8 @@ def load_quant(model, checkpoint, wbits, groupsize=-1):
         model.load_state_dict(safe_load(checkpoint), strict=False)
     else:
         model.load_state_dict(torch.load(checkpoint), strict=False)
+
+    make_quant_attn(model)
     model.seqlen = 2048
     print("Done.")
 

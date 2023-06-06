@@ -4,8 +4,7 @@ from argparse import ArgumentParser
 import termcolor
 import torch
 import transformers
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from gptq import *
 from modelutils import *
@@ -34,7 +33,7 @@ def get_santacoder(model, checkpoint, wbits, groupsize):
     else:
         # Load only models without weights
         config = AutoConfig.from_pretrained(model)
-        model =  AutoModelForCausalLM.from_config(config, torch_dtype=torch_dtype)
+        model = AutoModelForCausalLM.from_config(config, torch_dtype=torch_dtype)
     model = model.eval()
 
     if wbits < 16:
