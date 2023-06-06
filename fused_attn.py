@@ -1,9 +1,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 from torch.cuda.amp import custom_bwd, custom_fwd
+from torch.nn import functional as F
 from transformers.models.llama.modeling_llama import LlamaAttention, apply_rotary_pos_emb
+
 from quant import *
 
 
@@ -24,8 +25,10 @@ class QuantLlamaAttention(nn.Module):
         self.head_dim = hidden_size // num_heads
 
         if (self.head_dim * num_heads) != self.hidden_size:
-            raise ValueError(f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
-                             f" and `num_heads`: {num_heads}).")
+            raise ValueError(
+                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
+                f" and `num_heads`: {num_heads})."
+            )
         self.qkv_proj = qkv_proj
         self.o_proj = o_proj
         self.rotary_emb = rotary_emb
@@ -33,7 +36,15 @@ class QuantLlamaAttention(nn.Module):
     def _shape(self, tensor, seq_len, bsz):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
-    def forward(self, hidden_states, past_key_value=None, attention_mask=None, position_ids=None, output_attentions=False, use_cache=False):
+    def forward(
+        self,
+        hidden_states,
+        past_key_value=None,
+        attention_mask=None,
+        position_ids=None,
+        output_attentions=False,
+        use_cache=False,
+    ):
         """Input shape: Batch x Time x Channel"""
 
         bsz, q_len, _ = hidden_states.size()
@@ -64,7 +75,6 @@ class QuantLlamaAttention(nn.Module):
             query_states = query_states.contiguous()
             key_states = key_states.contiguous()
             value_states = value_states.contiguous()
-
 
         past_key_value = (key_states, value_states) if use_cache else None
 
@@ -100,7 +110,13 @@ def make_quant_attn(model):
         g_idx = torch.cat([q_proj.g_idx, k_proj.g_idx, v_proj.g_idx], dim=0)
         bias = torch.cat([q_proj.bias, k_proj.bias, v_proj.bias], dim=0) if q_proj.bias is not None else None
 
-        qkv_layer = QuantLinear(q_proj.bits, q_proj.groupsize, q_proj.infeatures, q_proj.outfeatures + k_proj.outfeatures + v_proj.outfeatures, True if q_proj.bias is not None else False)
+        qkv_layer = QuantLinear(
+            q_proj.bits,
+            q_proj.groupsize,
+            q_proj.infeatures,
+            q_proj.outfeatures + k_proj.outfeatures + v_proj.outfeatures,
+            True if q_proj.bias is not None else False,
+        )
         qkv_layer.qweight = qweights
         qkv_layer.qzeros = qzeros
         qkv_layer.scales = scales
@@ -109,15 +125,15 @@ def make_quant_attn(model):
 
         attn = QuantLlamaAttention(m.hidden_size, m.num_heads, qkv_layer, m.o_proj, m.rotary_emb)
 
-        if '.' in name:
-            parent_name = name.rsplit('.', 1)[0]
-            child_name = name[len(parent_name) + 1:]
+        if "." in name:
+            parent_name = name.rsplit(".", 1)[0]
+            child_name = name[len(parent_name) + 1 :]
             parent = model.get_submodule(parent_name)
         else:
-            parent_name = ''
+            parent_name = ""
             parent = model
             child_name = name
 
-        #print(f"Replacing {name} with quant_attn; parent: {parent_name}, child's name: {child_name}")
+        # print(f"Replacing {name} with quant_attn; parent: {parent_name}, child's name: {child_name}")
 
         setattr(parent, child_name, attn)
